@@ -1,12 +1,10 @@
-import csv
-import re
 
+import re
 from nltk import PorterStemmer
 from tqdm import tqdm 
 import numpy as np
 import scipy as sp # for sparse arrays
 from time import sleep
-import matplotlib.pyplot as plt 
 
 class Document:
     """Generic class to describe a document, under the assuption that each document only has a title and a text."""
@@ -14,17 +12,20 @@ class Document:
         self.title = title
         self.text = text
     def __repr__(self):
+        """Returns the title of the document."""
         return self.title
 
     def get_text(self):
+        """Returns the text of the document."""
         return self.text
     
     def to_int(self):
+        """Return the title of the document as an integer (method created in the context of the CISI corpus tests.)"""
         return int(self.title)
 
 def normalize(text, stemmer=False):
     """String normalization with additional stemmer. The function removes punctuation and gets all the character
-        of the string to be lowercase. Stemmer, which bt default is off, passes the obtained string to the Porter Stemmer.
+        of the string to be lowercase. Stemmer, which by default is off, passes the obtained string to the Porter Stemmer.
         The function returns a list of strings."""
     normalized = re.sub(r'[^\w^\s^-]','',text).lower()
     if(stemmer):
