@@ -1,9 +1,5 @@
 # Information Retrieval - Final Project
 
-## Project: Implementation of the BM25 IR system
-
-## Andrea Barbieri - A.Y. 2022/2023
-
 ### Folder content
 
 The content of the folders are the following:
