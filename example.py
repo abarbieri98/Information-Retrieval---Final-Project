@@ -1,12 +1,12 @@
 import ProbIR as PIR
-from tqdm import tqdm
 import csv
 import pickle
 
 data = []
+print("Loading data...")
 with open("./moviesummaries/wiki_movie_plots_deduped_with_summaries.csv", 'r',  encoding="utf8",) as f:
     reader = csv.reader(f, dialect='excel-tab', delimiter=',' )
-    for row in tqdm(reader):
+    for row in reader:
         data.append(row)
 
 movies = []
@@ -22,9 +22,9 @@ with open('moviesummaries/idf.pkl', 'rb') as f:
     idf = pickle.load(f)
 
 IR = PIR.ProbIR(movies,idx,tf,idf)
-
+# IR = PIR.ProbIR.from_corpus() # nedded for custom corpora
 print("Insert query to submit: ")
 qry = input()
-ans = IR.query(qry, results=10, pseudorel=20)
-print("Final retrived documents:")
+ans = IR.query(qry, results=10)
+print("\nFinal retrived documents:")
 PIR.ordered_print(ans)

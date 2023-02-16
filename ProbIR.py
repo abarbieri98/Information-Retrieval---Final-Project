@@ -1,4 +1,3 @@
-
 import re
 from nltk import PorterStemmer
 from tqdm import tqdm 
@@ -128,6 +127,9 @@ class ProbIR:
             for word in query:
                 try:
                     for d in range(len(self.corpus)):
+                        # the formula for the vanilla RSV score is the same as the formula 11.33
+                        # reported at page 233 of the book "An introduction to Information Retrieval"
+                        # by Manning et. al.
                         l_d = len(self.corpus[d].get_text())
                         tf_td = self.tf[word].todense()[0,d]
                         num = (k+1)*tf_td
@@ -135,8 +137,7 @@ class ProbIR:
                         if(k2 != None):
                             opt = ((k2+1)*tf_td)/(k2+tf_td)
                         else: 
-                            opt = 1
-                        
+                            opt = 1  
                         scores[d] += self.idf[word]*(num/den)*opt
                 except KeyError:
                     if(test_mode == False):
@@ -147,6 +148,9 @@ class ProbIR:
             n = len(self.corpus)
             for word in query:
                 try:
+                    # the formula for the relevance-corrected RSV score is the same as the formula 11.34
+                    # reported at page 233 of the book "An introduction to Information Retrieval"
+                    # by Manning et. al.
                     vr_t = count_relevant(relevant, self.idx[word])
                     vnr_t = count_relevant(nonrelevant, self.idx[word])
                     df_t = np.exp(self.idf[word])/n
@@ -170,19 +174,18 @@ class ProbIR:
         
         return scores
 
-    def query_relevance(self, query, relevant, nonrelevant, stemmer=False, results=5, b=.75, k=1.6, k2 = None,test_mode = False):
+    def __query_relevance(self, query, relevant, nonrelevant, stemmer=False, results=5, b=.75, k=1.6, k2 = None,test_mode = False):
         """Internal method that implements the relevance scoring, iterates until the user is satisfied. """
-        
-        # TODO: when re-called, pass also previous documents
+    
         scores = self.rsv_scores(query, b, k, k2, relevant, nonrelevant,test_mode)
 
         idx_sorted = scores.argsort()[::-1]
-        sel_books = [self.corpus[i] for i in idx_sorted[:results]]
-        ordered_print(sel_books)
+        sel_documents = [self.corpus[i] for i in idx_sorted[:results]]
+        ordered_print(sel_documents)
         sleep(1)
         ans = input("Are you satisfied with the obtained results? (y/n) ")
         if(ans == "y"):
-            return sel_books
+            return sel_documents
         elif(ans == "n"):
             print("\nTo help us refine the results, pick the relevant results \n(enter the number of the document)")
             flag = True
@@ -198,8 +201,12 @@ class ProbIR:
                 nonrelevant.remove(elem)
             if(test_mode==False):
                     print("Retrieving new documents...")
-            sel_books = self.query_relevance(query, relevant, nonrelevant, stemmer, results, b, k, k2)
-            return sel_books
+            sel_documents = self.__query_relevance(query, relevant, nonrelevant, stemmer, results, b, k, k2)
+            return sel_documents
+        else:
+            if(test_mode==False):
+                print("Invalid answer. Returning the last retrieved documents")
+            return sel_documents
     
     def query(self, query, stemmer = False, results = 5, b = .75, k = 1.6, k2 = None, pseudorel = 0, test_mode = False):
         """Submit a query to the IR system, with optional relevance feedback
@@ -225,10 +232,10 @@ class ProbIR:
                 Default value is 1.6.
             k2 : double >=0, None
                 Additional parameter that regulates calibrates term frequency scaling of the query. This is an additional parameter
-                only useful for very long queries. Suggested values range from 1.2 to 2.
+                only useful for very long queries, suggested values range from 1.2 to 2. To bypass the parameter, pass the value "None".
                 By default, the parameter is bypassed.
             pseudorel : int >= 0
-                Number of documents of the pseudo-relevance feedback.
+                Number of documents to use for the pseudo-relevance feedback.
                 By default the parameter is set to 0 (no relevance feedback).
             test_mode : bool
                 Parameters that acts like a "verbose" switch, if turned off will omit all the prints and return the selected documents,
@@ -240,7 +247,7 @@ class ProbIR:
             print(query)
         scores = self.rsv_scores(query,b,k,k2 = k2, test_mode = test_mode)
         idx_sorted = scores.argsort()[::-1]
-        sel_books = [self.corpus[i] for i in idx_sorted[:results]]
+        sel_documents = [self.corpus[i] for i in idx_sorted[:results]]
         
         # a positive pseudorel argument will activate the following scope, allowing pseudo-relevance feedback.
         # In the case where the pseudorel argument is greater then the 
@@ -251,15 +258,15 @@ class ProbIR:
             for i in range(pseudorel):
                 relevant.append(idx_sorted[i])
             nonrelevant = []
-            sel_books = self.__pseudorel_qry(query, relevant, nonrelevant, stemmer,results, b, k,k2, test_mode)
+            sel_documents = self.__pseudorel_qry(query, relevant, nonrelevant, stemmer,results, b, k,k2, test_mode)
         if(test_mode):
-            return sel_books
+            return sel_documents
         
-        ordered_print(sel_books)
+        ordered_print(sel_documents)
         sleep(1) # needed for sinchronization between print of the returned documents and user feedback 
         ans = input("Are you satisfied with the obtained results? (y/n) ")
         if(ans == "y"):
-            return sel_books
+            return sel_documents
         elif(ans == "n"):
             print("\nTo help us refine the results, pick the relevant results \n(enter the number of the document)")
             flag = True
@@ -277,17 +284,17 @@ class ProbIR:
                 nonrelevant.remove(elem)
                 if(test_mode==False):
                     print("Retrieving new documents...")
-            sel_books = self.query_relevance(query, relevant, nonrelevant, stemmer,results, b, k, k2, test_mode)
-            return sel_books
+            sel_documents = self.__query_relevance(query, relevant, nonrelevant, stemmer,results, b, k, k2, test_mode)
+            return sel_documents
         else:
-            return sel_books
+            return sel_documents
     
     
     def __pseudorel_qry(self, query, relevant, nonrelevant, stemmer, results, b, k, k2, test_mode):
         """Internal method that implements the pseudo-relevance feedback."""
         scores = self.rsv_scores(query, b, k, k2, relevant, nonrelevant, test_mode)
         idx_sorted = scores.argsort()[::-1]
-        sel_books = [self.corpus[i] for i in idx_sorted[:results]]
-        return sel_books
+        sel_documents = [self.corpus[i] for i in idx_sorted[:results]]
+        return sel_documents
 
     
