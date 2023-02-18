@@ -4,6 +4,7 @@ from tqdm import tqdm
 import numpy as np
 import scipy as sp # for sparse arrays
 from time import sleep
+import pickle
 
 class Document:
     """Generic class to describe a document, under the assuption that each document only has a title and a text."""
@@ -135,7 +136,8 @@ class ProbIR:
                         num = (k+1)*tf_td
                         den = k*((1-b)+b*(l_d/avg)) + tf_td
                         if(k2 != None):
-                            opt = ((k2+1)*tf_td)/(k2+tf_td)
+                            tf_tq = query.count(word)
+                            opt = ((k2+1)*tf_tq)/(k2+tf_tq)
                         else: 
                             opt = 1  
                         scores[d] += self.idf[word]*(num/den)*opt
@@ -153,7 +155,7 @@ class ProbIR:
                     # by Manning et. al.
                     vr_t = count_relevant(relevant, self.idx[word])
                     vnr_t = count_relevant(nonrelevant, self.idx[word])
-                    df_t = np.exp(self.idf[word])/n
+                    df_t = np.exp(self.idf[word])/n # we get df_t by starting from idf_t 
                     for d in range(len(self.corpus)):
                         l_d = len(self.corpus[d].get_text())
                         tf_td = self.tf[word].todense()[0,d]
@@ -296,5 +298,19 @@ class ProbIR:
         idx_sorted = scores.argsort()[::-1]
         sel_documents = [self.corpus[i] for i in idx_sorted[:results]]
         return sel_documents
+    
+    def export_idx(self,path):
+        """Export idx, tf and idf in pickle format.
+            
+            Parameters
+            ----------
+            path : str
+            Path in which the objects will be saved """
+        with open(path + "/idx.pkl", 'wb') as f:
+            pickle.dump(self.idx, f)
+        with open(path + '/tf.pkl', 'wb') as f:
+            pickle.dump(self.tf, f)
+        with open(path +'/idf.pkl', 'wb') as f:
+            pickle.dump(self.idf, f)
 
     
