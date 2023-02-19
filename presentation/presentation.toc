@@ -1,3 +1,0 @@
-\beamer@sectionintoc {1}{The BM25 Model}{3}{0}{1}
-\beamer@sectionintoc {2}{Python Implementation}{11}{0}{2}
-\beamer@sectionintoc {3}{Evaluating the system}{17}{0}{3}
